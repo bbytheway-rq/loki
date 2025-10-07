@@ -18,6 +18,7 @@ const (
 	STRING  = Type(arrow.STRING)
 	INT64   = Type(arrow.INT64)
 	FLOAT64 = Type(arrow.FLOAT64)
+	STRUCT  = Type(arrow.STRUCT)
 )
 
 func (t Type) String() string {
@@ -32,6 +33,8 @@ func (t Type) String() string {
 		return "INT64"
 	case FLOAT64:
 		return "FLOAT64"
+	case STRUCT:
+		return "STRUCT"
 	default:
 		return "INVALID"
 	}
@@ -91,6 +94,19 @@ func (tBytes) ID() Type                  { return INT64 }
 func (tBytes) String() string            { return "bytes" }
 func (tBytes) ArrowType() arrow.DataType { return Arrow.Integer }
 
+type tStruct struct {
+	arrowType *arrow.StructType
+}
+
+func (t tStruct) ID() Type                  { return STRUCT }
+func (t tStruct) String() string            { return "struct" }
+func (t tStruct) ArrowType() arrow.DataType { return t.arrowType }
+
+// NewStructType creates a DataType from an Arrow StructType
+func NewStructType(arrowType *arrow.StructType) DataType {
+	return tStruct{arrowType: arrowType}
+}
+
 var (
 	names = map[string]DataType{
 		Loki.Null.String():      Loki.Null,
@@ -101,6 +117,7 @@ var (
 		Loki.Timestamp.String(): Loki.Timestamp,
 		Loki.Duration.String():  Loki.Duration,
 		Loki.Bytes.String():     Loki.Bytes,
+		Loki.Struct.String():    Loki.Struct,
 	}
 )
 
