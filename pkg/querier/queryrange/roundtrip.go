@@ -991,20 +991,29 @@ func NewMetricTripperware(cfg Config, engineOpts logql.EngineOpts, log log.Logge
 		queryRangeMiddleware = append(
 			queryRangeMiddleware,
 			NewQuerySizeLimiterMiddleware(schema.Configs, engineOpts, log, limits, statsHandler),
-			base.InstrumentMiddleware("split_by_interval", metrics.InstrumentMiddlewareMetrics),
-			SplitByIntervalMiddleware(schema.Configs, limits, merger, newMetricQuerySplitter(limits, iqo), metrics.SplitByMetrics),
 		)
 
+		// Create V2 engine time range (2 hours ago to now)
+		// TODO: Make this configurable via config
+		// move this to limits?
+		v2EngineRange := NewV2EngineTimeRange(time.Now(), -2*time.Hour, 0)
+
+		// Splitting, sharding, caching and retry middlwares are not added to v2 engine splits
+		// as they are expected to be handled by the new engine handler.
+		chunksEngineMWs := []base.Middleware{
+			base.InstrumentMiddleware("split_by_interval", metrics.InstrumentMiddlewareMetrics),
+			SplitByIntervalMiddleware(schema.Configs, limits, merger, newMetricQuerySplitter(limits, iqo), metrics.SplitByMetrics),
+		}
+
 		if cfg.CacheResults {
-			queryRangeMiddleware = append(
-				queryRangeMiddleware,
+			chunksEngineMWs = append(chunksEngineMWs,
 				base.InstrumentMiddleware("results_cache", metrics.InstrumentMiddlewareMetrics),
 				queryCacheMiddleware,
 			)
 		}
 
 		if cfg.ShardedQueries {
-			queryRangeMiddleware = append(queryRangeMiddleware,
+			chunksEngineMWs = append(chunksEngineMWs,
 				NewQueryShardMiddleware(
 					log,
 					schema.Configs,
@@ -1021,18 +1030,28 @@ func NewMetricTripperware(cfg Config, engineOpts logql.EngineOpts, log log.Logge
 		} else {
 			// The sharding middleware takes care of enforcing this limit for both shardable and non-shardable queries.
 			// If we are not using sharding, we enforce the limit by adding this middleware after time splitting.
-			queryRangeMiddleware = append(queryRangeMiddleware,
+
+			// TODO: also add for v2 splits?
+			chunksEngineMWs = append(chunksEngineMWs,
 				NewQuerierSizeLimiterMiddleware(schema.Configs, engineOpts, log, limits, statsHandler),
 			)
 		}
 
 		if cfg.MaxRetries > 0 {
-			queryRangeMiddleware = append(
-				queryRangeMiddleware,
+			chunksEngineMWs = append(chunksEngineMWs,
 				base.InstrumentMiddleware("retry", metrics.InstrumentMiddlewareMetrics),
 				base.NewRetryMiddleware(log, cfg.MaxRetries, metrics.RetryMiddlewareMetrics, metricsNamespace),
 			)
 		}
+
+		// short-circuts v2 engine queries, they do not use the next handler.
+		// chunks queries use the next handler.
+		engineSplitMiddleware := NewEngineSplitMiddleware(v2EngineRange, chunksEngineMWs, merger)
+		queryRangeMiddleware = append(
+			queryRangeMiddleware,
+			base.InstrumentMiddleware("engine_split", metrics.InstrumentMiddlewareMetrics),
+			engineSplitMiddleware,
+		)
 
 		// Finally, if the user selected any query range middleware, stitch it in.
 		if len(queryRangeMiddleware) > 0 {
