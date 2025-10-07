@@ -32,14 +32,7 @@ func unwrap(operation types.UnwrapOp, identifier string, record arrow.Record, al
 
 	// Build output schema and record
 	fields := buildOutputFields(record.Schema(), errTracker.hasErrors)
-	return buildResult(
-		record,
-		unwrappedCol,
-		errorCol,
-		errorDetailsCol,
-		fields,
-		int64(sourceCol.Len()),
-	)
+	return buildResult(record, unwrappedCol, errorCol, errorDetailsCol, fields)
 }
 
 func findSourceColumn(schema *arrow.Schema, identifier string) (int, error) {
@@ -145,10 +138,8 @@ func buildOutputFields(
 
 func buildResult(
 	batch arrow.Record,
-	unwrappedCol arrow.Array,
-	errorCol, errorDetailsCol arrow.Array,
+	unwrappedCol, errorCol, errorDetailsCol arrow.Array,
 	fields []arrow.Field,
-	numRows int64,
 ) (*array.Struct, error) {
 	numOriginalCols := int(batch.NumCols())
 	hasErrors := errorCol != nil
