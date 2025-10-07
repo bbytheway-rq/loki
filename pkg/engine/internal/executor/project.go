@@ -41,7 +41,11 @@ func NewProjectPipeline(input Pipeline, columns []physical.ColumnExpression, eva
 			case *physical.ColumnExpr:
 				columnName := col.Ref.Column
 				columnOrder = append(columnOrder, columnName)
-				fields[columnName] = arrow.Field{Name: columnName, Type: vec.Type().ArrowType(), Metadata: datatype.ColumnMetadata(vec.ColumnType(), vec.Type())}
+				fields[columnName] = arrow.Field{
+					Name:     columnName,
+					Type:     vec.Type().ArrowType(),
+					Metadata: datatype.ColumnMetadata(vec.ColumnType(), vec.Type()),
+				}
 				projected[columnName] = vec.ToArray()
 			case *physical.UnwrapExpr:
 				if arrStruct, ok := vec.ToArray().(*array.Struct); ok {

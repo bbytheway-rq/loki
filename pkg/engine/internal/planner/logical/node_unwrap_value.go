@@ -3,7 +3,7 @@ package logical
 import (
 	"fmt"
 
-	"github.com/grafana/loki/v3/pkg/engine/planner/schema"
+	"github.com/grafana/loki/v3/pkg/engine/internal/planner/schema"
 )
 
 // UnwrapValue represents an unwrap instruction that extracts numeric values from log labels.
@@ -28,7 +28,7 @@ func (u *UnwrapValue) Name() string {
 // String returns the string representation of the Unwrap instruction
 func (u *UnwrapValue) String() string {
 	if u.UnwrapOperation != "" {
-		return fmt.Sprintf("UNWRAP %s [unwrap_operation=%s, identifier=%s]", u.Table.Name(), u.UnwrapOperation, u.Identifier)
+		return fmt.Sprintf("UNWRAP %s [operation=%s, identifier=%s]", u.Table.Name(), u.UnwrapOperation, u.Identifier)
 	}
 	return fmt.Sprintf("UNWRAP %s [identifier=%s]", u.Table.Name(), u.Identifier)
 }

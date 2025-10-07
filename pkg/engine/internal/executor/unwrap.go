@@ -9,6 +9,7 @@ import (
 	"github.com/apache/arrow-go/v18/arrow/array"
 	"github.com/apache/arrow-go/v18/arrow/memory"
 	"github.com/dustin/go-humanize"
+
 	"github.com/grafana/loki/v3/pkg/engine/internal/datatype"
 	"github.com/grafana/loki/v3/pkg/engine/internal/types"
 )
@@ -49,6 +50,8 @@ func findSourceColumn(schema *arrow.Schema, identifier string) (int, error) {
 	}
 	return -1, fmt.Errorf("column %s not found", identifier)
 }
+
+type conversionFn func(value string) (float64, error)
 
 func getConversionFunction(operation types.UnwrapOp) conversionFn {
 	switch operation {
@@ -183,8 +186,6 @@ func buildResult(
 	return result, err
 }
 
-type conversionFn func(value string) (float64, error)
-
 func convertFloat(v string) (float64, error) {
 	return strconv.ParseFloat(v, 64)
 }
@@ -251,9 +252,6 @@ func (et *errorTracker) releaseBuilders() {
 		et.detailsBuilder.Release()
 	}
 }
-
-// UnwrapOperation represents the type of unwrap operation to perform
-type UnwrapOperation int
 
 func ConvertFloat(v string) (float64, error) {
 	return strconv.ParseFloat(v, 64)
