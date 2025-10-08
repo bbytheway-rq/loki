@@ -8,14 +8,18 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafana/loki/v3/pkg/engine/internal/planner/physical"
+	"github.com/grafana/loki/v3/pkg/engine/internal/semconv"
 	"github.com/grafana/loki/v3/pkg/engine/internal/types"
 	"github.com/grafana/loki/v3/pkg/util/arrowtest"
 )
 
 func TestNewFilterPipeline(t *testing.T) {
+	colName := "utf8.builtin.name"
+	colValid := "bool.builtin.valid"
+
 	fields := []arrow.Field{
-		{Name: "name", Type: arrow.BinaryTypes.String, Metadata: types.ColumnMetadata(types.ColumnTypeBuiltin, types.Loki.String)},
-		{Name: "valid", Type: arrow.FixedWidthTypes.Boolean, Metadata: types.ColumnMetadata(types.ColumnTypeBuiltin, types.Loki.Bool)},
+		semconv.FieldFromFQN(colName, true),
+		semconv.FieldFromFQN(colValid, true),
 	}
 
 	t.Run("filter with true literal predicate", func(t *testing.T) {
@@ -25,9 +29,9 @@ func TestNewFilterPipeline(t *testing.T) {
 		// Create input data using arrowtest.Rows
 		inputRows := []arrowtest.Rows{
 			{
-				{"name": "Alice", "valid": true},
-				{"name": "Bob", "valid": false},
-				{"name": "Charlie", "valid": true},
+				{colName: "Alice", colValid: true},
+				{colName: "Bob", colValid: false},
+				{colName: "Charlie", colValid: true},
 			},
 		}
 		input := NewArrowtestPipeline(alloc, schema, inputRows...)
@@ -62,9 +66,9 @@ func TestNewFilterPipeline(t *testing.T) {
 		// Create input data using arrowtest.Rows
 		inputRows := []arrowtest.Rows{
 			{
-				{"name": "Alice", "valid": true},
-				{"name": "Bob", "valid": false},
-				{"name": "Charlie", "valid": true},
+				{colName: "Alice", colValid: true},
+				{colName: "Bob", colValid: false},
+				{colName: "Charlie", colValid: true},
 			},
 		}
 
@@ -98,9 +102,9 @@ func TestNewFilterPipeline(t *testing.T) {
 		// Create input data using arrowtest.Rows
 		inputRows := []arrowtest.Rows{
 			{
-				{"name": "Alice", "valid": true},
-				{"name": "Bob", "valid": false},
-				{"name": "Charlie", "valid": true},
+				{colName: "Alice", colValid: true},
+				{colName: "Bob", colValid: false},
+				{colName: "Charlie", colValid: true},
 			},
 		}
 		input := NewArrowtestPipeline(alloc, schema, inputRows...)
@@ -122,8 +126,8 @@ func TestNewFilterPipeline(t *testing.T) {
 
 		// Create expected output (only rows where valid=true)
 		expectedRows := arrowtest.Rows{
-			{"name": "Alice", "valid": true},
-			{"name": "Charlie", "valid": true},
+			{colName: "Alice", colValid: true},
+			{colName: "Charlie", colValid: true},
 		}
 
 		// Read the pipeline output
@@ -144,10 +148,10 @@ func TestNewFilterPipeline(t *testing.T) {
 		// Create input data using arrowtest.Rows
 		inputRows := []arrowtest.Rows{
 			{
-				{"name": "Alice", "valid": true},
-				{"name": "Bob", "valid": false},
-				{"name": "Bob", "valid": true},
-				{"name": "Charlie", "valid": false},
+				{colName: "Alice", colValid: true},
+				{colName: "Bob", colValid: false},
+				{colName: "Bob", colValid: true},
+				{colName: "Charlie", colValid: false},
 			},
 		}
 		input := NewArrowtestPipeline(alloc, schema, inputRows...)
@@ -175,7 +179,7 @@ func TestNewFilterPipeline(t *testing.T) {
 
 		// Create expected output (only rows where name=="Bob" AND valid!=false)
 		expectedRows := arrowtest.Rows{
-			{"name": "Bob", "valid": true},
+			{colName: "Bob", colValid: true},
 		}
 
 		// Read the pipeline output
@@ -229,12 +233,12 @@ func TestNewFilterPipeline(t *testing.T) {
 		// Create input data split across multiple batches using arrowtest.Rows
 		inputRows := []arrowtest.Rows{
 			{
-				{"name": "Alice", "valid": true},
-				{"name": "Bob", "valid": false},
+				{colName: "Alice", colValid: true},
+				{colName: "Bob", colValid: false},
 			},
 			{
-				{"name": "Charlie", "valid": true},
-				{"name": "Dave", "valid": false},
+				{colName: "Charlie", colValid: true},
+				{colName: "Dave", colValid: false},
 			},
 		}
 		input := NewArrowtestPipeline(alloc, schema, inputRows...)
@@ -256,8 +260,8 @@ func TestNewFilterPipeline(t *testing.T) {
 
 		// Create expected output (only rows where valid=true)
 		expectedRows := arrowtest.Rows{
-			{"name": "Alice", "valid": true},
-			{"name": "Charlie", "valid": true},
+			{colName: "Alice", colValid: true},
+			{colName: "Charlie", colValid: true},
 		}
 
 		// Read the pipeline output
@@ -290,9 +294,9 @@ func TestNewFilterPipeline(t *testing.T) {
 		// Create input data with null values
 		inputRows := []arrowtest.Rows{
 			{
-				{"name": "Alice", "valid": true},
-				{"name": nil, "valid": true}, // null name
-				{"name": "Bob", "valid": false},
+				{colName: "Alice", colValid: true},
+				{colName: nil, colValid: true}, // null name
+				{colName: "Bob", colValid: false},
 			},
 		}
 		input := NewArrowtestPipeline(alloc, schema, inputRows...)
@@ -314,8 +318,8 @@ func TestNewFilterPipeline(t *testing.T) {
 
 		// Create expected output (only rows where valid=true, including null name)
 		expectedRows := arrowtest.Rows{
-			{"name": "Alice", "valid": true},
-			{"name": nil, "valid": true}, // null name should be retained
+			{colName: "Alice", colValid: true},
+			{colName: nil, colValid: true}, // null name should be retained
 		}
 
 		// Read the pipeline output
